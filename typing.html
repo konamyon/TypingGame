@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <title>タイピングゲーム</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 40px;
+    }
+
+    #jp {
+      font-size: 24px;
+      margin: 10px;
+    }
+
+    #roma {
+      font-size: 28px;
+      letter-spacing: 2px;
+    }
+
+    .typed {
+      color: green;
+    }
+
+    .next {
+      text-decoration: underline;
+    }
+
+    #timer {
+      font-size: 20px;
+      margin: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>タイピングゲーム</h1>
+  <div id="timer">残り: 60秒</div>
+  <div id="jp">準備中...</div>
+  <div id="roma">---</div>
+  <div id="result"></div>
+  <button onclick="startGame()">スタート</button>
+
+  <script>
+    const data = [
+      { jp: "こんにちは", roma: "konnichiwa" },
+      { jp: "吾輩は猫である", roma: "wagahaihanekodearu" },
+      { jp: "プログラミング", roma: "puroguramingu" },
+      { jp: "ありがとう", roma: "arigatou" },
+      { jp: "東京電機大学", roma: "toukyodenkidaigaku" },
+      { jp: "情報処理", roma: "jouhousyori" },
+      { jp: "チャレンジ", roma: "charenji" },
+      { jp: "コードレビュー", roma: "kodorebyuu" },
+      { jp: "インターネット", roma: "intaanetto" },
+      { jp: "ブラウザ", roma: "burauza" }
+    ];
+
+    let current = null;
+    let index = 0;
+    let startTime;
+    let correctCount = 0;
+    let typedChars = 0;
+    let timerId;
+    let remainingTime = 60;
+    let isGameRunning = false;
+    let correctChars = 0;
+    let misses = 0;
+    let usedIndices = [];
+
+    function startGame() {
+      correctCount = 0;
+      typedChars = 0;
+      correctChars = 0;
+      misses = 0;
+      index = 0;
+      current = null;
+      remainingTime = 60;
+      isGameRunning = true;
+      usedIndices = [];
+
+      document.getElementById("result").textContent = "";
+      startTime = new Date();
+
+      // タイマー開始
+      document.getElementById("timer").textContent = `残り: ${remainingTime}秒`;
+      timerId = setInterval(() => {
+        remainingTime--;
+        document.getElementById("timer").textContent = `残り: ${remainingTime}秒`;
+
+        if (remainingTime <= 0) {
+          endGame();
+        }
+      }, 1000);
+
+      setNewWord();
+    }
+
+    function endGame() {
+      isGameRunning = false;
+      clearInterval(timerId);
+      document.getElementById("jp").textContent = "終了！";
+      document.getElementById("roma").textContent = "";
+      const totalTime = 60;
+      const kps = (correctChars / totalTime).toFixed(2);
+      const accuracy = typedChars === 0 ? 0 : (correctChars / typedChars * 100).toFixed(2);
+      document.getElementById("result").textContent =
+        `正解数: ${correctCount}問、打鍵数: ${typedChars}、正打: ${correctChars}、ミス: ${misses}、KPS: ${kps}、正確性: ${accuracy}%`;
+
+    }
+
+    function setNewWord() {
+      if (usedIndices.length >= data.length) {
+        usedIndices = [];
+      }
+
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * data.length);
+      } while (usedIndices.includes(randomIndex));
+
+      usedIndices.push(randomIndex);
+      current = data[randomIndex];
+      index = 0;
+
+      document.getElementById("jp").textContent = current.jp;
+      updateRomanDisplay();
+    }
+
+    function updateRomanDisplay() {
+      const typed = `<span class="typed">${current.roma.slice(0, index)}</span>`;
+      const nextChar = `<span class="next">${current.roma.charAt(index)}</span>`;
+      const remaining = current.roma.slice(index + 1);
+      document.getElementById("roma").innerHTML = typed + nextChar + remaining;
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (!isGameRunning || !current) return;
+
+      const key = e.key;
+
+      if (key === current.roma.charAt(index)) {
+        index++;
+        typedChars++;
+        correctChars++;
+        updateRomanDisplay();
+
+        if (index >= current.roma.length) {
+          correctCount++;
+          setNewWord();
+        }
+      } else {
+        // 間違いをカウント（ShiftやControlなど除外可）
+        if (/^[a-z0-9]$/i.test(key)) { // 1文字だけのキーに限定
+          typedChars++;
+          misses++;
+        }
+      }
+    });
+
+    window.onload = () => {
+      document.getElementById("result").textContent = "スタートボタンを押してね";
+    };
+  </script>
+</body>
+
+</html>
