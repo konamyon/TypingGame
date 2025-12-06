@@ -2,23 +2,76 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>タイピングゲーム（完成版）</title>
+  <title>タイピングゲーム</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin: 40px; }
-    #jp { font-size: 24px; margin: 10px; }
-    #roma { font-size: 28px; letter-spacing: 2px; }
-    .typed { color: rgb(180, 180, 180); }
-    .next { text-decoration: underline; }
-    #timer { font-size: 20px; margin: 10px; }
+body {
+  font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+  background: #f5f7fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+#game-container {
+  width: 600px;
+  height: 200px;
+  background: white;
+  padding: 40px 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+#jp {
+  font-size: 26px;
+  margin: 20px 0 10px;
+}
+
+#roma {
+  font-size: 30px;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+#timer {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+#result {
+  margin-top: 25px;
+  font-size: 15px;
+  color: #333;
+  line-height: 1.6;
+}
+
+#restart {
+  margin-top: 20px;
+  font-size: 18px;
+  color: #000000;
+}
+
+.typed {
+  color: #bcc0c6;
+}
+
+.next {
+  /* text-decoration: underline; */
+  color: #007bff;
+}
+
   </style>
 </head>
 <body>
-  <h1>タイピングゲーム</h1>
-  <div id="timer">残り: 60秒</div>
-  <div id="jp">準備中...</div>
-  <div id="roma">---</div>
-  <div id="result"></div>
-  <div id="restart"></div>
+  <div id="game-container">
+    <div id="timer"></div>
+    <div id="jp"></div>
+    <div id="roma"></div>
+    <div id="result"></div>
+    <div id="restart"></div>
+  </div>
 
   <script>
     // --- ひらがな → ローマ字候補表 ---
@@ -76,6 +129,7 @@
     let remainingTime = 60;
     let isGameRunning = false;
     let isCountingDown = false;
+    let isResultScreen = false;
     let usedIndices = [];
 
     // --- ひらがなからローマ字候補を生成 ---
@@ -128,11 +182,12 @@
       inputBuffer = "";
       confirmedText = "";
       isGameRunning = true;
+      isResultScreen = false;
       usedIndices = [];
       document.getElementById("result").textContent = "";
       document.getElementById("restart").textContent = "";
-      document.getElementById("jp").textContent = "準備中...";
-      document.getElementById("roma").textContent = "---";
+      document.getElementById("jp").textContent = "";
+      document.getElementById("roma").textContent = "";
       document.getElementById("timer").textContent = `残り: ${remainingTime}秒`;
 
       timerId = setInterval(() => {
@@ -152,6 +207,8 @@
       document.getElementById("jp").textContent = count;
       document.getElementById("roma").textContent = "";
       document.getElementById("timer").textContent = "";
+      document.getElementById("result").textContent = "";
+      document.getElementById("restart").textContent = "";
       countdownId = setInterval(() => {
         count--;
         if (count > 0) {
@@ -167,6 +224,7 @@
     // --- ゲーム終了 ---
     function endGame() {
       isGameRunning = false;
+      isResultScreen = true;
       clearInterval(timerId);
       document.getElementById("jp").textContent = "終了！";
       document.getElementById("roma").textContent = "";
@@ -175,7 +233,7 @@
       const score = (correctChars * accuracy * 0.01).toFixed(0);
       document.getElementById("result").textContent =
         `正解数: ${correctCount}問、打鍵数: ${typedChars}、正打: ${correctChars}、ミス: ${misses}、KPS: ${kps}、正確性: ${accuracy}%、スコア: ${score}`;
-      document.getElementById("restart").textContent = `[スペースで再スタート]`;
+      document.getElementById("restart").textContent = `スペースで再スタート！`;
     }
 
     // --- 新しい単語をセット ---
@@ -209,10 +267,11 @@
       current = null;
       inputBuffer = "";
       confirmedText = "";
-      document.getElementById("jp").textContent = "準備中...";
-      document.getElementById("roma").textContent = "---";
-      document.getElementById("timer").textContent = "残り: 60秒";
-      document.getElementById("result").textContent = "スペースキーでスタート！";
+      document.getElementById("jp").textContent = "";
+      document.getElementById("roma").textContent = "";
+      document.getElementById("timer").textContent = "";
+      document.getElementById("restart").textContent = "スペースキーでスタート！";
+      document.getElementById("result").textContent = "";
     }
 
     // --- キー入力処理 ---
@@ -223,7 +282,7 @@
         startCountdown();
         return;
       }
-      if (e.code === "Escape" && isGameRunning) {
+      if (e.code === "Escape" && (isGameRunning || isResultScreen) && !isCountingDown) {
         e.preventDefault();
         resetToStartScreen();
         return;
@@ -256,7 +315,7 @@
     });
 
     window.onload = () => {
-      document.getElementById("result").textContent = "スペースキーでスタート！";
+      document.getElementById("restart").textContent = "スペースキーでスタート！";
     };
   </script>
 </body>
