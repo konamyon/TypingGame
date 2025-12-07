@@ -1,0 +1,57 @@
+body {
+  font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+  background: #f5f7fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+#game-container {
+  width: 630px;
+  height: 200px;
+  background: white;
+  padding: 40px 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+#jp {
+  font-size: 26px;
+  margin: 20px 0 10px;
+}
+
+#roma {
+  font-size: 30px;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+#timer {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+#result {
+  margin-top: 25px;
+  font-size: 15px;
+  color: #333;
+  line-height: 1.6;
+}
+
+#restart {
+  margin-top: 20px;
+  font-size: 18px;
+  color: #000000;
+}
+
+.typed {
+  color: #bcc0c6;
+}
+
+.next {
+  /* text-decoration: underline; */
+  color: #007bff;
+}

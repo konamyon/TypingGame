@@ -1,0 +1,243 @@
+// --- ひらがな → ローマ字候補表 ---
+const ROMAJI_TABLE = {
+    "きゃ": ["kya"], "きゅ": ["kyu"], "きょ": ["kyo"],
+    "しゃ": ["sha", "sya"], "しゅ": ["shu", "syu"], "しょ": ["sho", "syo"],
+    "ちゃ": ["cha", "tya"], "ちゅ": ["chu", "tyu"], "ちょ": ["cho", "tyo"],
+    "じゃ": ["ja", "jya", "zya"], "じゅ": ["ju", "jyu", "zyu"], "じょ": ["jo", "jyo", "zyo"],
+    "し": ["shi", "si"], "ち": ["chi", "ti"], "つ": ["tsu", "tu"],
+    "ふ": ["fu", "hu"], "じ": ["ji", "zi"],
+    "あ": ["a"], "い": ["i"], "う": ["u"], "え": ["e"], "お": ["o"],
+    "か": ["ka"], "き": ["ki"], "く": ["ku"], "け": ["ke"], "こ": ["ko"],
+    "さ": ["sa"], "す": ["su"], "せ": ["se"], "そ": ["so"],
+    "た": ["ta"], "て": ["te"], "と": ["to"],
+    "な": ["na"], "に": ["ni"], "ぬ": ["nu"], "ね": ["ne"], "の": ["no"],
+    "は": ["ha"], "ひ": ["hi"], "へ": ["he"], "ほ": ["ho"],
+    "ま": ["ma"], "み": ["mi"], "む": ["mu"], "め": ["me"], "も": ["mo"],
+    "や": ["ya"], "ゆ": ["yu"], "よ": ["yo"],
+    "ら": ["ra"], "り": ["ri"], "る": ["ru"], "れ": ["re"], "ろ": ["ro"],
+    "わ": ["wa"], "を": ["wo"],
+    "ん": ["n", "nn"],
+    "が": ["ga"], "ぎ": ["gi"], "ぐ": ["gu"], "げ": ["ge"], "ご": ["go"],
+    "ざ": ["za"], "ず": ["zu"], "ぜ": ["ze"], "ぞ": ["zo"],
+    "だ": ["da"], "で": ["de"], "ど": ["do"],
+    "ば": ["ba"], "び": ["bi"], "ぶ": ["bu"], "べ": ["be"], "ぼ": ["bo"],
+    "ぱ": ["pa"], "ぴ": ["pi"], "ぷ": ["pu"], "ぺ": ["pe"], "ぽ": ["po"],
+    "ー": ["-"]
+};
+
+// --- 出題データ ---
+const data = [
+    { jp: "東京電機大学", hira: "とうきょうでんきだいがく" },
+    { jp: "キタキタ北千住", hira: "きたきたきたせんじゅ" },
+    { jp: "技術は人なり", hira: "ぎじゅつはひとなり" },
+    { jp: "オタク大学", hira: "おたくだいがく" },
+    { jp: "地獄の手書きレポート", hira: "じごくのてがきれぽーと" },
+    { jp: "実学尊重", hira: "じつがくそんちょう" },
+    { jp: "学生主役", hira: "がくせいしゅやく" },
+    { jp: "微分積分学及び演習", hira: "びぶんせきぶんがくおよびえんしゅう" },
+    { jp: "線形代数学及び演習", hira: "せんけいだいすうがくおよびえんしゅう" },
+    { jp: "東京電機大学で学ぶ", hira: "とうきょうでんきだいがくでまなぶ" },
+];
+
+let current = null;
+let kanaCandidates = [];
+let currentIndex = 0;
+let inputBuffer = "";
+let confirmedText = "";
+
+let correctCount = 0;
+let typedChars = 0;
+let correctChars = 0;
+let misses = 0;
+let timerId;
+let remainingTime = 60;
+let isGameRunning = false;
+let isCountingDown = false;
+let isResultScreen = false;
+let usedIndices = [];
+
+// --- ひらがなからローマ字候補を生成 ---
+function hiraToRomajiCandidates(hira) {
+    const result = [];
+    for (let i = 0; i < hira.length;) {
+        let chunk = hira[i];
+        if (i + 1 < hira.length) {
+            const two = hira[i] + hira[i + 1];
+            if (ROMAJI_TABLE[two]) {
+                result.push(ROMAJI_TABLE[two]);
+                i += 2;
+                continue;
+            }
+        }
+        result.push(ROMAJI_TABLE[chunk] || [chunk]);
+        i++;
+    }
+    return result;
+}
+
+// --- ローマ字表示を組み立て ---
+function buildRomajiDisplay() {
+    let past = `<span class="typed">${confirmedText}</span>`;
+    let typing = `<span class="typed">${inputBuffer}</span>`;
+
+    let rest = "";
+    for (let i = currentIndex; i < kanaCandidates.length; i++) {
+        const shortest = kanaCandidates[i].reduce((a, b) => a.length < b.length ? a : b);
+        rest += shortest;
+    }
+
+    // 入力中の分を削る
+    rest = rest.slice(inputBuffer.length);
+
+    if (rest.length > 0) {
+        rest = `<span class="next">${rest[0]}</span>` + rest.slice(1);
+    }
+
+    return past + typing + rest;
+}
+
+// --- ゲーム開始 ---
+function startGame() {
+    correctCount = 0;
+    typedChars = 0;
+    correctChars = 0;
+    misses = 0;
+    remainingTime = 60;
+    inputBuffer = "";
+    confirmedText = "";
+    isGameRunning = true;
+    isResultScreen = false;
+    usedIndices = [];
+    document.getElementById("result").textContent = "";
+    document.getElementById("restart").textContent = "";
+    document.getElementById("jp").textContent = "";
+    document.getElementById("roma").textContent = "";
+    document.getElementById("timer").textContent = `残り: ${remainingTime}秒`;
+
+    timerId = setInterval(() => {
+        remainingTime--;
+        document.getElementById("timer").textContent = `残り: ${remainingTime}秒`;
+        if (remainingTime <= 0) endGame();
+    }, 1000);
+
+    setNewWord();
+}
+
+// --- カウントダウン ---
+function startCountdown() {
+    if (isCountingDown || isGameRunning) return;
+    isCountingDown = true;
+    let count = 3;
+    document.getElementById("jp").textContent = count;
+    document.getElementById("roma").textContent = "";
+    document.getElementById("timer").textContent = "";
+    document.getElementById("result").textContent = "";
+    document.getElementById("restart").textContent = "";
+    countdownId = setInterval(() => {
+        count--;
+        if (count > 0) {
+            document.getElementById("jp").textContent = count;
+        } else {
+            clearInterval(countdownId);
+            isCountingDown = false;
+            startGame();
+        }
+    }, 1000);
+}
+
+// --- ゲーム終了 ---
+function endGame() {
+    isGameRunning = false;
+    isResultScreen = true;
+    clearInterval(timerId);
+    document.getElementById("jp").textContent = "終了！";
+    document.getElementById("roma").textContent = "";
+    const kps = (correctChars / 60).toFixed(2);
+    const accuracy = typedChars === 0 ? 0 : (correctChars / typedChars * 100).toFixed(2);
+    const score = (correctChars * accuracy * 0.01).toFixed(0);
+    document.getElementById("result").textContent =
+        `正解数: ${correctCount}問、打鍵数: ${typedChars}、正打: ${correctChars}、ミス: ${misses}、KPS: ${kps}、正確性: ${accuracy}%、スコア: ${score}`;
+    document.getElementById("restart").textContent = `スペースで再スタート！`;
+}
+
+// --- 新しい単語をセット ---
+function setNewWord() {
+    if (usedIndices.length >= data.length) usedIndices = [];
+    let randomIndex;
+    do {
+        randomIndex = Math.floor(Math.random() * data.length);
+    } while (usedIndices.includes(randomIndex));
+    usedIndices.push(randomIndex);
+
+    current = data[randomIndex];
+    kanaCandidates = hiraToRomajiCandidates(current.hira);
+    currentIndex = 0;
+    inputBuffer = "";
+    confirmedText = "";
+
+    document.getElementById("jp").textContent = current.jp;
+    updateRomanDisplay();
+}
+
+// --- 表示更新 ---
+function updateRomanDisplay() {
+    document.getElementById("roma").innerHTML = buildRomajiDisplay();
+}
+
+// --- リセット ---
+function resetToStartScreen() {
+    isGameRunning = false;
+    clearInterval(timerId);
+    current = null;
+    inputBuffer = "";
+    confirmedText = "";
+    document.getElementById("jp").textContent = "";
+    document.getElementById("roma").textContent = "";
+    document.getElementById("timer").textContent = "";
+    document.getElementById("restart").textContent = "スペースキーでスタート！";
+    document.getElementById("result").textContent = "";
+}
+
+// --- キー入力処理 ---
+document.addEventListener("keydown", function (e) {
+    const key = e.key.toLowerCase();
+    if (e.code === "Space" && !isGameRunning) {
+        e.preventDefault();
+        startCountdown();
+        return;
+    }
+    if (e.code === "Escape" && (isGameRunning || isResultScreen) && !isCountingDown) {
+        e.preventDefault();
+        resetToStartScreen();
+        return;
+    }
+    if (!isGameRunning || !current) return;
+    if (!/^[a-z-]$/.test(key)) return;
+
+    typedChars++;
+    inputBuffer += key;
+
+    let matched = kanaCandidates[currentIndex].some(r => r.startsWith(inputBuffer));
+    if (!matched) {
+        misses++;
+        inputBuffer = inputBuffer.slice(0, -1);
+        return;
+    }
+
+    correctChars++;
+    if (kanaCandidates[currentIndex].includes(inputBuffer)) {
+        confirmedText += inputBuffer;
+        currentIndex++;
+        inputBuffer = "";
+        if (currentIndex >= kanaCandidates.length) {
+            correctCount++;
+            setNewWord();
+            return;
+        }
+    }
+    updateRomanDisplay();
+});
+
+window.onload = () => {
+    document.getElementById("restart").textContent = "スペースキーでスタート！";
+};
